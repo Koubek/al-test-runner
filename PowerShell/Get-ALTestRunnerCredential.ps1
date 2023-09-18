@@ -6,38 +6,31 @@ function Get-ALTestRunnerCredential {
         $LaunchConfig
     )
 
-    if ($VM.IsPresent) {
-        $VMUserName = Get-ValueFromALTestRunnerConfig -KeyName 'vmUserName'
-        $VMSecurePassword = Get-ValueFromALTestRunnerConfig -KeyName 'vmSecurePassword'
+    $params = @{}
 
-        if (($VMUserName -eq '') -or ($VMSecurePassword -eq '')) {
-            $Credential = Get-Credential -Message ('Please enter the credentials to connect to vm {0}' -f (Get-ServerFromLaunchJson -LaunchConfig $LaunchConfig))
-            if ($null -eq $Credential) {
-                throw "Credentials not entered"
-            }
-            Set-ALTestRunnerCredential -Credential $Credential -VM
-            return $Credential
-        }
-        else {
-            return [pscredential]::new($VMUserName, (ConvertTo-SecureString $VMSecurePassword))
-        }
+    if ($VM.IsPresent) {
+        $credNamePropName = 'vmUserName'
+        $credSecretPropName = 'vmSecurePassword'
+        $params += @{ "VM" = $true }
     } else {
-        $UserName = Get-ValueFromALTestRunnerConfig -KeyName 'userName'
-        $SecurePwd = Get-ValueFromALTestRunnerConfig -KeyName 'securePassword'
-        
-        if (($UserName -eq '') -or ($SecurePwd -eq '')) {
-            $Credential = Get-Credential -Message ('Please enter the credentials to connect to server {0}' -f (Get-ServerFromLaunchJson -LaunchConfig $LaunchConfig))
-            if ($null -eq $Credential) {
-                throw "Credentials not entered"
-            }
-            Set-ALTestRunnerCredential -Credential $Credential
-            return $Credential
-        }
-        else {
-            return [pscredential]::new($UserName, (ConvertTo-SecureString $SecurePwd))
-        }
+        $credNamePropName = 'userName'
+        $credSecretPropName = 'securePassword'
     }
 
+    $credName = Get-ValueFromALTestRunnerConfig -KeyName $credNamePropName
+    $credSecret = Get-ValueFromALTestRunnerConfig -KeyName $credSecretPropName
+
+    if (($credName -eq '') -or ($credSecret -eq '')) {
+        $Credential = Get-Credential -Message ('Please enter the credentials to connect to {0}' -f (Get-ServerFromLaunchJson -LaunchConfig $LaunchConfig))
+        if ($null -eq $Credential) {
+            throw "Credentials not entered"
+        }
+        Set-ALTestRunnerCredential -Credential $Credential @params
+        return $Credential
+    }
+    else {
+        return [pscredential]::new($credName, (ConvertTo-SecureString $credSecret))
+    }
 }
 
 Export-ModuleMember -Function Get-ALTestRunnerCredential
